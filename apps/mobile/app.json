@@ -2,6 +2,7 @@
   "expo": {
     "name": "D-Chemistry",
     "slug": "d-chemistry",
+    "owner": "haldar13",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -41,6 +42,14 @@
     "plugins": [
       "expo-router"
     ],
-    "scheme": "dchemistry"
+    "scheme": "dchemistry",
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "c2f2b073-0ee8-4fa8-a05c-f33332d04eb7"
+      }
+    }
   }
 }
