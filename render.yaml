@@ -1,44 +1,44 @@
 services:
   # The Node.js Express Backend
-  - type: web
-    name: d-chemistry-backend
-    env: docker
-    dockerfilePath: ./packages/backend/Dockerfile
-    region: singapore
-    plan: starter
-    healthCheckPath: /api/v1/health
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        value: 4000
-      - key: DATABASE_URL
-        fromDatabase:
-          name: d-chemistry-db
-          property: connectionString
-      - key: JWT_SECRET
-        generateValue: true
-      - key: JWT_REFRESH_SECRET
-        generateValue: true
-      # Add placeholders for remaining secrets to be filled in the Render dashboard
-      - key: GOOGLE_CLIENT_ID
-        sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
-      - key: RAZORPAY_KEY_ID
-        sync: false
-      - key: RAZORPAY_KEY_SECRET
-        sync: false
-      - key: GEMINI_API_KEY
-        sync: false
-      - key: AWS_ACCESS_KEY_ID
-        sync: false
-      - key: AWS_SECRET_ACCESS_KEY
-        sync: false
-
-  # Managed PostgreSQL Database
-  - type: psql
-    name: d-chemistry-db
-    region: singapore
-    plan: starter
-    postgresMajorVersion: 15
+    - type: web
+        name: d-chemistry-backend
+            env: docker
+                dockerfilePath: ./packages/backend/Dockerfile
+                    region: singapore
+                        plan: starter
+                            healthCheckPath: /api/v1/health
+                                envVars:
+                                      - key: NODE_ENV
+                                              value: production
+                                                    - key: PORT
+                                                            value: 4000
+                                                                  - key: DATABASE_URL
+                                                                          fromDatabase:
+                                                                                    name: d-chemistry-db
+                                                                                              property: connectionString
+                                                                                                    - key: JWT_SECRET
+                                                                                                            generateValue: true
+                                                                                                                  - key: JWT_REFRESH_SECRET
+                                                                                                                          generateValue: true
+                                                                                                                                # Add placeholders for remaining secrets to be filled in the Render dashboard
+                                                                                                                                      - key: GOOGLE_CLIENT_ID
+                                                                                                                                              sync: false
+                                                                                                                                                    - key: GOOGLE_CLIENT_SECRET
+                                                                                                                                                            sync: false
+                                                                                                                                                                  - key: RAZORPAY_KEY_ID
+                                                                                                                                                                          sync: false
+                                                                                                                                                                                - key: RAZORPAY_KEY_SECRET
+                                                                                                                                                                                        sync: false
+                                                                                                                                                                                              - key: GEMINI_API_KEY
+                                                                                                                                                                                                      sync: false
+                                                                                                                                                                                                            - key: AWS_ACCESS_KEY_ID
+                                                                                                                                                                                                                    sync: false
+                                                                                                                                                                                                                          - key: AWS_SECRET_ACCESS_KEY
+                                                                                                                                                                                                                                  sync: false
+                                                                                                                                                                                                                                  
+                                                                                                                                                                                                                                  databases:
+                                                                                                                                                                                                                                    - name: d-chemistry-db
+                                                                                                                                                                                                                                        region: singapore
+                                                                                                                                                                                                                                            plan: starter
+                                                                                                                                                                                                                                                postgresMajorVersion: 15
+                                                                                                                                                                                                                                                
