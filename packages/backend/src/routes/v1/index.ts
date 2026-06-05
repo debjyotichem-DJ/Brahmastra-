@@ -1,0 +1,40 @@
+import { Router } from "express";
+import { authRoutes } from "./auth.routes";
+import { userRoutes } from "./user.routes";
+import { courseRoutes } from "./course.routes";
+import { lessonRoutes } from "./lesson.routes";
+import { testRoutes } from "./test.routes";
+import { batchRoutes } from "./batch.routes";
+import { paymentRoutes } from "./payment.routes";
+import { liveClassRoutes } from "./live-class.routes";
+import { notificationRoutes } from "./notification.routes";
+import { doubtRoutes } from "./doubt.routes";
+import { announcementRoutes } from "./announcement.routes";
+import { flashcardRoutes } from "./flashcard.routes";
+import { formulaSheetRoutes } from "./formula-sheet.routes";
+import { uploadRoutes } from "./upload.routes";
+import { adminRoutes } from "./admin.routes";
+import { dashboardRoutes } from "./dashboard.routes";
+import { chatRoutes } from "./chat.routes";
+
+const v1Router = Router();
+
+v1Router.use("/auth", authRoutes);
+v1Router.use("/users", userRoutes);
+v1Router.use("/courses", courseRoutes);
+v1Router.use("/lessons", lessonRoutes);
+v1Router.use("/tests", testRoutes);
+v1Router.use("/batches", batchRoutes);
+v1Router.use("/payments", paymentRoutes);
+v1Router.use("/live-classes", liveClassRoutes);
+v1Router.use("/notifications", notificationRoutes);
+v1Router.use("/doubts", doubtRoutes);
+v1Router.use("/announcements", announcementRoutes);
+v1Router.use("/flashcards", flashcardRoutes);
+v1Router.use("/formula-sheets", formulaSheetRoutes);
+v1Router.use("/chat", chatRoutes);
+v1Router.use("/upload", uploadRoutes);
+v1Router.use("/admin", adminRoutes);
+v1Router.use("/dashboard", dashboardRoutes);
+
+export { v1Router };

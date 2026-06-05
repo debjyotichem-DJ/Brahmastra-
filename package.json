@@ -1,0 +1,27 @@
+{
+  "name": "d-chemistry",
+  "version": "1.0.0",
+  "private": true,
+  "description": "D-Chemistry — Institute of Chemistry by Debajyoti Haldar. Online teaching platform for JEE/NEET/ISC/ICSE students.",
+  "author": "Debajyoti Haldar",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "scripts": {
+    "dev:backend": "pnpm --filter @d-chemistry/backend dev",
+    "dev:web": "pnpm --filter @d-chemistry/web dev",
+    "dev:mobile": "pnpm --filter @d-chemistry/mobile start",
+    "build:shared": "pnpm --filter @d-chemistry/shared build",
+    "build:backend": "pnpm --filter @d-chemistry/backend build",
+    "build:web": "pnpm --filter @d-chemistry/web build",
+    "db:generate": "pnpm --filter @d-chemistry/backend prisma:generate",
+    "db:migrate": "pnpm --filter @d-chemistry/backend prisma:migrate",
+    "db:seed": "pnpm --filter @d-chemistry/backend prisma:seed",
+    "db:studio": "pnpm --filter @d-chemistry/backend prisma:studio",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "pnpm -r clean"
+  }
+}

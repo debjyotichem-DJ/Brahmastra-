@@ -1,0 +1,667 @@
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// D-Chemistry — Complete Prisma Schema
+// Institute of Chemistry by Debajyoti Haldar
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Authentication & Users ─────────────────────────────────────────────────────
+
+enum Role {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+enum Board {
+  ICSE
+  ISC
+  CBSE
+  JEE
+  NEET
+}
+
+enum StudentClass {
+  CLASS_10
+  CLASS_11
+  CLASS_12
+}
+
+enum Language {
+  EN
+  BN
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  phone        String?  @unique
+  passwordHash String?
+  role         Role     @default(STUDENT)
+  googleId     String?  @unique
+  fcmToken     String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  profile                Profile?
+  enrollments            Enrollment[]
+  testAttempts           TestAttempt[]
+  videoProgress          VideoProgress[]
+  doubts                 Doubt[]
+  doubtReplies           DoubtReply[]
+  payments               Payment[]
+  notifications          Notification[]
+  notificationPreference NotificationPreference?
+  announcements          Announcement[]           @relation("AnnouncementCreator")
+  refreshTokens          RefreshToken[]
+  chatConversations      ChatConversation[]
+
+  @@map("users")
+}
+
+model Profile {
+  id             String        @id @default(uuid())
+  userId         String        @unique
+  name           String
+  avatar         String?
+  class          StudentClass?
+  board          Board?
+  language       Language      @default(EN)
+  bio            String?
+  streak         Int           @default(0)
+  lastActiveDate DateTime?
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model OtpCode {
+  id        String   @id @default(uuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email, code])
+  @@map("otp_codes")
+}
+
+// ── Course & Content ───────────────────────────────────────────────────────────
+
+model Subject {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  icon        String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  chapters Chapter[]
+  batches  BatchSubject[]
+
+  @@map("subjects")
+}
+
+model Chapter {
+  id          String   @id @default(uuid())
+  subjectId   String
+  name        String
+  description String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  subject       Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  topics        Topic[]
+  formulaSheets FormulaSheet[]
+
+  @@index([subjectId])
+  @@map("chapters")
+}
+
+model Topic {
+  id          String   @id @default(uuid())
+  chapterId   String
+  name        String
+  description String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  chapter    Chapter     @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  lessons    Lesson[]
+  questions  Question[]
+  flashCards FlashCard[]
+
+  @@index([chapterId])
+  @@map("topics")
+}
+
+enum LessonType {
+  VIDEO
+  PDF
+  ARTICLE
+  DPP
+}
+
+model Lesson {
+  id           String     @id @default(uuid())
+  topicId      String
+  type         LessonType
+  title        String
+  description  String?
+  videoUrl     String?
+  pdfUrl       String?
+  content      String?    @db.Text
+  thumbnailUrl String?
+  duration     Int?       // seconds
+  isFree       Boolean    @default(false)
+  order        Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // Relations
+  topic            Topic           @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  videoProgress    VideoProgress[]
+  doubts           Doubt[]
+  liveClassRecording LiveClass?    @relation("LiveClassRecording")
+
+  @@index([topicId])
+  @@map("lessons")
+}
+
+model VideoProgress {
+  id            String   @id @default(uuid())
+  userId        String
+  lessonId      String
+  position      Float    @default(0) // seconds
+  duration      Float    @default(0)
+  completed     Boolean  @default(false)
+  lastWatchedAt DateTime @default(now())
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("video_progress")
+}
+
+// ── Test & MCQ Engine ──────────────────────────────────────────────────────────
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum QuestionType {
+  MCQ
+  INTEGER
+}
+
+enum ExamType {
+  JEE_MAIN
+  JEE_ADVANCED
+  NEET
+  ISC
+  ICSE
+  CBSE
+  WBJEE
+}
+
+model Question {
+  id           String       @id @default(uuid())
+  text         String       @db.Text
+  options      Json         // QuestionOption[]
+  correctIndex Int
+  explanation  String       @db.Text
+  topicId      String
+  difficulty   Difficulty   @default(MEDIUM)
+  type         QuestionType @default(MCQ)
+  pyqYear      Int?
+  examType     ExamType?
+  imageUrl     String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // Relations
+  topic         Topic          @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  testSections  TestSectionQuestion[]
+  testResponses TestResponse[]
+
+  @@index([topicId])
+  @@index([examType, pyqYear])
+  @@map("questions")
+}
+
+enum TestType {
+  PRACTICE
+  MOCK
+  CHAPTER
+  PYQ
+}
+
+model Test {
+  id              String    @id @default(uuid())
+  title           String
+  description     String?
+  type            TestType
+  duration        Int       // minutes
+  totalMarks      Int
+  negativeMarking Float     @default(0)
+  batchId         String?
+  isPublished     Boolean   @default(false)
+  scheduledAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  batch    Batch?        @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  sections TestSection[]
+  attempts TestAttempt[]
+
+  @@index([batchId])
+  @@index([type])
+  @@map("tests")
+}
+
+model TestSection {
+  id               String @id @default(uuid())
+  testId           String
+  name             String
+  marksPerQuestion Int    @default(4)
+  negativeMarks    Float  @default(1)
+  order            Int    @default(0)
+
+  // Relations
+  test      Test                  @relation(fields: [testId], references: [id], onDelete: Cascade)
+  questions TestSectionQuestion[]
+
+  @@index([testId])
+  @@map("test_sections")
+}
+
+model TestSectionQuestion {
+  id            String @id @default(uuid())
+  testSectionId String
+  questionId    String
+  order         Int    @default(0)
+
+  // Relations
+  testSection TestSection @relation(fields: [testSectionId], references: [id], onDelete: Cascade)
+  question    Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([testSectionId, questionId])
+  @@map("test_section_questions")
+}
+
+model TestAttempt {
+  id               String    @id @default(uuid())
+  userId           String
+  testId           String
+  score            Float     @default(0)
+  totalMarks       Int       @default(0)
+  correctCount     Int       @default(0)
+  incorrectCount   Int       @default(0)
+  unattemptedCount Int       @default(0)
+  percentile       Float?
+  rank             Int?
+  startedAt        DateTime  @default(now())
+  submittedAt      DateTime?
+  timeTaken        Int?      // seconds
+
+  // Relations
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  test      Test           @relation(fields: [testId], references: [id], onDelete: Cascade)
+  responses TestResponse[]
+
+  @@index([userId])
+  @@index([testId])
+  @@map("test_attempts")
+}
+
+model TestResponse {
+  id               String  @id @default(uuid())
+  attemptId        String
+  questionId       String
+  selectedOption   Int?
+  integerAnswer    Int?
+  isCorrect        Boolean @default(false)
+  isMarkedForReview Boolean @default(false)
+  timeSpent        Int     @default(0) // seconds
+
+  // Relations
+  attempt  TestAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question Question   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, questionId])
+  @@map("test_responses")
+}
+
+// ── Batch & Enrollment ─────────────────────────────────────────────────────────
+
+model Batch {
+  id           String       @id @default(uuid())
+  name         String
+  description  String?
+  class        StudentClass
+  board        Board
+  isFree       Boolean      @default(false)
+  price        Float        @default(0)
+  inviteCode   String?      @unique
+  isActive     Boolean      @default(true)
+  startDate    DateTime?
+  endDate      DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // Relations
+  enrollments   Enrollment[]
+  subjects      BatchSubject[]
+  tests         Test[]
+  liveClasses   LiveClass[]
+  payments      Payment[]
+  announcements Announcement[]
+
+  @@map("batches")
+}
+
+model BatchSubject {
+  id        String @id @default(uuid())
+  batchId   String
+  subjectId String
+
+  // Relations
+  batch   Batch   @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([batchId, subjectId])
+  @@map("batch_subjects")
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+model Enrollment {
+  id         String           @id @default(uuid())
+  userId     String
+  batchId    String
+  status     EnrollmentStatus @default(ACTIVE)
+  paymentId  String?
+  enrolledAt DateTime         @default(now())
+  expiresAt  DateTime?
+
+  // Relations
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  batch Batch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, batchId])
+  @@index([userId])
+  @@index([batchId])
+  @@map("enrollments")
+}
+
+// ── Payments ───────────────────────────────────────────────────────────────────
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+model Payment {
+  id                  String        @id @default(uuid())
+  userId              String
+  batchId             String
+  amount              Float
+  currency            String        @default("INR")
+  razorpayOrderId     String        @unique
+  razorpayPaymentId   String?
+  razorpaySignature   String?
+  status              PaymentStatus @default(PENDING)
+  receipt             String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  // Relations
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  batch Batch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([razorpayOrderId])
+  @@map("payments")
+}
+
+// ── Live Classes ───────────────────────────────────────────────────────────────
+
+model LiveClass {
+  id                String   @id @default(uuid())
+  title             String
+  description       String?
+  batchId           String
+  scheduledAt       DateTime
+  duration          Int      // minutes
+  meetLink          String?
+  agoraChannelName  String?
+  recordingLessonId String?  @unique
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  batch           Batch   @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  recordingLesson Lesson? @relation("LiveClassRecording", fields: [recordingLessonId], references: [id], onDelete: SetNull)
+
+  @@index([batchId])
+  @@index([scheduledAt])
+  @@map("live_classes")
+}
+
+// ── Notifications ──────────────────────────────────────────────────────────────
+
+enum NotificationType {
+  CLASS_REMINDER
+  TEST_RESULT
+  NEW_CONTENT
+  PAYMENT_CONFIRMED
+  DOUBT_REPLY
+  ANNOUNCEMENT
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  title     String
+  body      String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  data      Json?
+  createdAt DateTime         @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id             String  @id @default(uuid())
+  userId         String  @unique
+  classReminder  Boolean @default(true)
+  testResult     Boolean @default(true)
+  newContent     Boolean @default(true)
+  paymentConfirm Boolean @default(true)
+  doubtReply     Boolean @default(true)
+  announcement   Boolean @default(true)
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+// ── Doubts ─────────────────────────────────────────────────────────────────────
+
+enum DoubtStatus {
+  OPEN
+  ANSWERED
+  CLOSED
+}
+
+model Doubt {
+  id         String      @id @default(uuid())
+  userId     String
+  lessonId   String?
+  questionId String?
+  text       String      @db.Text
+  imageUrl   String?
+  status     DoubtStatus @default(OPEN)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  // Relations
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson  Lesson?      @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  replies DoubtReply[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("doubts")
+}
+
+model DoubtReply {
+  id        String   @id @default(uuid())
+  doubtId   String
+  userId    String
+  text      String   @db.Text
+  imageUrl  String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  doubt Doubt @relation(fields: [doubtId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([doubtId])
+  @@map("doubt_replies")
+}
+
+// ── Announcements ──────────────────────────────────────────────────────────────
+
+model Announcement {
+  id        String   @id @default(uuid())
+  title     String
+  body      String   @db.Text
+  batchId   String?
+  createdBy String
+  createdAt DateTime @default(now())
+
+  // Relations
+  batch   Batch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  creator User   @relation("AnnouncementCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([batchId])
+  @@map("announcements")
+}
+
+// ── D-Chemistry Specific ───────────────────────────────────────────────────────
+
+model FlashCard {
+  id       String @id @default(uuid())
+  topicId  String
+  front    String @db.Text
+  back     String @db.Text
+  category String
+  imageUrl String?
+  order    Int    @default(0)
+
+  // Relations
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([topicId])
+  @@map("flash_cards")
+}
+
+model FormulaSheet {
+  id          String  @id @default(uuid())
+  chapterId   String
+  title       String
+  pdfUrl      String?
+  htmlContent String? @db.Text
+  order       Int     @default(0)
+
+  // Relations
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@index([chapterId])
+  @@map("formula_sheets")
+}
+
+// ── AI Chatbot ─────────────────────────────────────────────────────────────────
+
+model ChatConversation {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  context   String   @default("academic") // academic, general, doubt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@index([userId])
+  @@map("chat_conversations")
+}
+
+model ChatMessage {
+  id             String   @id @default(uuid())
+  conversationId String
+  role           String   // user, assistant
+  content        String   @db.Text
+  createdAt      DateTime @default(now())
+
+  // Relations
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@map("chat_messages")
+}
